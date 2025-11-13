@@ -22,3 +22,7 @@ model_checkpoints/
 
 # Archivos de sistema
 .DS_Store
+
+# Configuraciones locales
+data/
+lib/
