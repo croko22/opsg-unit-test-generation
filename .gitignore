@@ -26,4 +26,8 @@ model_checkpoints/
 # Configuraciones locales
 data/
 lib/
+baseline_tests/
 evosuite-tests/
+refined_tests/
+valid_tests/
+docs/
