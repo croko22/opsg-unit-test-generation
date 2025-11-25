@@ -48,10 +48,10 @@ def test_jacoco_pit():
     print("\n✅ Todos los JARs están disponibles")
     print()
     
-    # Buscar un test de ejemplo en baseline_tests
-    baseline_dir = evaluator.base_dir / "baseline_tests"
+    # Buscar un test de ejemplo en generated_tests/baseline
+    baseline_dir = evaluator.base_dir / "generated_tests/baseline"
     if not baseline_dir.exists():
-        print("⚠️  No hay tests en baseline_tests/ todavía")
+        print("⚠️  No hay tests en generated_tests/baseline/ todavía")
         print("   Ejecuta primero: python scripts/pipeline/phase1_generate_baseline.py")
         return False
     
@@ -64,7 +64,7 @@ def test_jacoco_pit():
     test_file = test_files[0]
     print(f"📄 Test de ejemplo: {test_file.name}")
     
-    # Extraer info del path: baseline_tests/PROJECT/CLASS/FILE.java
+    # Extraer info del path: generated_tests/baseline/PROJECT/CLASS/FILE.java
     parts = test_file.relative_to(baseline_dir).parts
     if len(parts) >= 2:
         project = parts[0]

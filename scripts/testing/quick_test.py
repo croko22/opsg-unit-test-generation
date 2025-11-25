@@ -51,8 +51,8 @@ def run_evosuite(class_name: str, jar_file: Path, time_budget: int = 30):
     else:
         evosuite_jar = lib_dir / "evosuite.jar"
     
-    output_dir = Path("evosuite-tests")
-    output_dir.mkdir(exist_ok=True)
+    output_dir = Path("generated_tests/evosuite")
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"🔧 Generating tests for: {class_name}")
     print(f"   Using: {evosuite_jar.name}")

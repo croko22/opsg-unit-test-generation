@@ -217,15 +217,16 @@ class PreflightChecker:
     def check_output_dirs(self) -> bool:
         """Verifica directorios de salida."""
         dirs = [
-            "baseline_tests",
-            "refined_tests",
-            "valid_tests",
+            "generated_tests/baseline",
+            "generated_tests/refined",
+            "generated_tests/validated",
+            "generated_tests/evosuite",
             "evaluation_results",
             "figures"
         ]
         
         for d in dirs:
-            Path(d).mkdir(exist_ok=True)
+            Path(d).mkdir(parents=True, exist_ok=True)
         
         return True
     

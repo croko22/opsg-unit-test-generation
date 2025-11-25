@@ -38,19 +38,19 @@ class PipelineRunner:
                 "id": 1,
                 "name": "Baseline Generation",
                 "script": self.pipeline_dir / "phase1_generate_baseline.py",
-                "output_marker": self.base_dir / "baseline_tests/T_base_results.json"
+                "output_marker": self.base_dir / "generated_tests/baseline/T_base_results.json"
             },
             {
                 "id": 2,
                 "name": "LLM Refinement",
                 "script": self.pipeline_dir / "phase2_llm_refinement.py",
-                "output_marker": self.base_dir / "refined_tests/T_refined_results.json"
+                "output_marker": self.base_dir / "generated_tests/refined/T_refined_results.json"
             },
             {
                 "id": 3,
                 "name": "Verification",
                 "script": self.pipeline_dir / "phase3_verification.py",
-                "output_marker": self.base_dir / "valid_tests/T_valid_results.json"
+                "output_marker": self.base_dir / "generated_tests/validated/T_valid_results.json"
             },
             {
                 "id": 4,

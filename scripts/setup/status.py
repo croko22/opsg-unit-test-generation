@@ -118,9 +118,10 @@ def main():
     # Outputs
     print("📁 Directorios de Output:")
     output_dirs = [
-        "baseline_tests",
-        "refined_tests",
-        "valid_tests",
+        "generated_tests/baseline",
+        "generated_tests/refined",
+        "generated_tests/validated",
+        "generated_tests/evosuite",
         "evaluation_results",
         "figures"
     ]

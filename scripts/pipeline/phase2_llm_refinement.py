@@ -603,7 +603,7 @@ def main():
     print()
     
     # Cargar resultados de Fase 1
-    baseline_results_file = Path("baseline_tests/T_base_results.json")
+    baseline_results_file = Path("generated_tests/baseline/T_base_results.json")
     
     if not baseline_results_file.exists():
         print("❌ No se encuentra T_base_results.json")
@@ -663,7 +663,7 @@ def main():
             
             if result['success']:
                 # Guardar test refinado
-                refined_dir = Path("refined_tests") / project / class_name.replace(".", "_")
+                refined_dir = Path("generated_tests/refined") / project / class_name.replace(".", "_")
                 refined_dir.mkdir(parents=True, exist_ok=True)
                 
                 refined_path = refined_dir / test_path.name
@@ -701,7 +701,7 @@ def main():
                 })
     
     # Guardar resultados
-    output_file = Path("refined_tests/T_refined_results.json")
+    output_file = Path("generated_tests/refined/T_refined_results.json")
     output_file.parent.mkdir(exist_ok=True)
     
     with open(output_file, 'w') as f:
@@ -713,7 +713,7 @@ def main():
     print("="*80)
     print(f"Tests procesados: {len(successful)}")
     print(f"Refinados exitosamente: {success_count}")
-    print(f"\n📁 Tests refinados en: refined_tests/")
+    print(f"\n📁 Tests refinados en: generated_tests/refined/")
     print(f"📄 Resultados en: {output_file}")
     print("\n✅ T_refined generado. Listo para FASE 3 (Verificación).")
     print("="*80)

@@ -183,7 +183,7 @@ def main():
     print()
     
     # Cargar resultados de Fase 2
-    refined_results_file = Path("refined_tests/T_refined_results.json")
+    refined_results_file = Path("generated_tests/refined/T_refined_results.json")
     
     if not refined_results_file.exists():
         print("❌ No se encuentra T_refined_results.json")
@@ -308,18 +308,18 @@ def main():
                 })
     
     # Guardar T_valid
-    output_file = Path("valid_tests/T_valid_results.json")
+    output_file = Path("generated_tests/validated/T_valid_results.json")
     output_file.parent.mkdir(exist_ok=True)
     
     with open(output_file, 'w') as f:
         json.dump(valid_results, f, indent=2)
     
     # Copiar tests válidos a directorio separado
-    valid_dir = Path("valid_tests")
+    valid_dir = Path("generated_tests/validated")
     for result in valid_results:
         if result.get('verified'):
             refined_path = Path(result['refined_file'])
-            dest = valid_dir / refined_path.relative_to("refined_tests")
+            dest = valid_dir / refined_path.relative_to("generated_tests/refined")
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(refined_path, dest)
     
@@ -330,7 +330,7 @@ def main():
     print(f"Tests verificados: {len(to_verify)}")
     print(f"Compilaron exitosamente: {compiled_count} ({compiled_count/len(to_verify)*100:.1f}%)")
     print(f"Preservaron oráculo: {oracle_preserved_count} ({oracle_preserved_count/len(to_verify)*100:.1f}%)")
-    print(f"\n📁 Tests válidos en: valid_tests/")
+    print(f"\n📁 Tests válidos en: generated_tests/validated/")
     print(f"📄 Resultados en: {output_file}")
     print(f"\n✅ T_valid generado con {oracle_preserved_count} tests.")
     print("   Listo para FASE 4 (Evaluación).")

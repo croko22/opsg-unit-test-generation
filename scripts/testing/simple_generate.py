@@ -3,7 +3,7 @@
 SIMPLE test generator - Just works, no bullshit.
 
 Genera tests con EvoSuite para una lista de clases.
-Guarda todo en baseline_tests/ con un JSON simple.
+Guarda todo en generated_tests/baseline/ con un JSON simple.
 
 Usage:
     python simple_generate.py
@@ -37,7 +37,7 @@ def generate_test(project: str, class_name: str, time_budget: int = 60):
         return {"success": False, "error": "no_jar"}
     
     # Output dir
-    output = Path("baseline_tests") / project / class_name.replace(".", "_")
+    output = Path("generated_tests/baseline") / project / class_name.replace(".", "_")
     output.mkdir(parents=True, exist_ok=True)
     
     # EvoSuite
@@ -122,8 +122,8 @@ def main():
             ok += 1
     
     # Guardar
-    output_file = Path("baseline_tests") / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    output_file.parent.mkdir(exist_ok=True)
+    output_file = Path("generated_tests/baseline") / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    output_file.parent.mkdir(parents=True, exist_ok=True)
     
     with open(output_file, 'w') as f:
         json.dump(results, f, indent=2)

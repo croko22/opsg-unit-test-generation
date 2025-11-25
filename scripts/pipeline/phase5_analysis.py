@@ -40,13 +40,13 @@ class ResultsAnalyzer:
         data = {}
         
         # T_base
-        baseline_file = Path("baseline_tests/T_base_results.json")
+        baseline_file = Path("generated_tests/baseline/T_base_results.json")
         if baseline_file.exists():
             with open(baseline_file) as f:
                 data['baseline'] = json.load(f)
         
         # T_valid
-        valid_file = Path("valid_tests/T_valid_results.json")
+        valid_file = Path("generated_tests/validated/T_valid_results.json")
         if valid_file.exists():
             with open(valid_file) as f:
                 data['valid'] = json.load(f)

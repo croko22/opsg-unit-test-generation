@@ -6,7 +6,7 @@ Genera T_base usando EvoSuite sobre SF110.
 Este es tu CONTROL para los experimentos.
 
 Output:
-  - baseline_tests/ con todos los tests
+  - generated_tests/baseline/ con todos los tests
   - baseline_metrics.json con cobertura y mutación inicial
 """
 
@@ -28,7 +28,7 @@ def find_jar(project: str, dataset: str = "SF110-binary") -> Path:
 def run_evosuite(project: str, class_name: str, jar: Path, time_budget: int = 60) -> dict:
     """Genera test con EvoSuite."""
     
-    output = Path("baseline_tests") / project / class_name.replace(".", "_")
+    output = Path("generated_tests/baseline") / project / class_name.replace(".", "_")
     output.mkdir(parents=True, exist_ok=True)
     
     evosuite = list(Path("lib").glob("evosuite-*.jar"))[-1]
@@ -177,7 +177,7 @@ def main():
         results.append(result)
         
         # Guardar incrementalmente
-        output_file = Path("baseline_tests/T_base_results.json")
+        output_file = Path("generated_tests/baseline/T_base_results.json")
         with open(output_file, 'w') as f:
             json.dump(results, f, indent=2)
     
@@ -187,8 +187,8 @@ def main():
     print("="*80)
     print(f"Total procesados: {len(classes)}")
     print(f"Exitosos: {success_count} ({success_count/len(classes)*100:.1f}%)")
-    print(f"\n📁 Tests guardados en: baseline_tests/")
-    print(f"📄 Métricas en: baseline_tests/T_base_results.json")
+    print(f"\n📁 Tests guardados en: generated_tests/baseline/")
+    print(f"📄 Métricas en: generated_tests/baseline/T_base_results.json")
     print("\n✅ T_base generado. Listo para FASE 2 (LLM Refinement).")
     print("="*80)
 

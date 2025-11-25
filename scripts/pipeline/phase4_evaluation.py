@@ -30,6 +30,7 @@ class MetricsEvaluator:
         self.jacoco_cli = self.base_dir / "lib/jacococli.jar"
         self.pitest_jar = self.base_dir / "lib/pitest-command-line.jar"
         self.junit_jar = self.base_dir / "lib/junit-4.11.jar"
+        self.hamcrest_jar = self.base_dir / "lib/hamcrest-core-1.3.jar"
         self.evosuite_jar = self.base_dir / "lib/evosuite-1.2.0.jar"
     
     def find_sut_jar(self, project: str) -> Path:
@@ -76,7 +77,7 @@ class MetricsEvaluator:
             
             compile_cmd = [
                 "javac",
-                "-cp", f"{sut_jar}:{self.junit_jar}:{self.evosuite_jar}",
+                "-cp", f"{sut_jar}:{self.junit_jar}:{self.hamcrest_jar}:{self.evosuite_jar}",
                 "-d", str(output_dir),
             ] + [str(f) for f in java_files]
             
@@ -129,9 +130,10 @@ class MetricsEvaluator:
                 
                 cmd = [
                     "java",
+                    "-Djava.awt.headless=true",
                     f"-javaagent:{self.jacoco_agent}=destfile={exec_file}",
                     "-cp",
-                    f"{test_dir}:{sut_jar}:{self.junit_jar}:{self.evosuite_jar}",
+                    f"{test_dir}:{sut_jar}:{self.junit_jar}:{self.hamcrest_jar}:{self.evosuite_jar}",
                     "org.junit.runner.JUnitCore",
                     test_class_name
                 ]
@@ -142,6 +144,11 @@ class MetricsEvaluator:
                     text=True,
                     timeout=60
                 )
+                
+                # Debug: print JUnit output
+                if result.returncode != 0 or not exec_file.exists():
+                    print(f"      ⚠️  JUnit stdout: {result.stdout[:200]}")
+                    print(f"      ⚠️  JUnit stderr: {result.stderr[:200]}")
                 
                 # Si el test falló, aún podemos obtener cobertura
                 if not exec_file.exists():
@@ -288,8 +295,9 @@ class MetricsEvaluator:
                 # Comando PIT
                 cmd = [
                     "java",
+                    "-Djava.awt.headless=true",
                     "-cp",
-                    f"{str(self.pitest_jar)}:{test_dir}:{sut_jar}:{self.junit_jar}:{self.evosuite_jar}",
+                    f"{str(self.pitest_jar)}:{test_dir}:{sut_jar}:{self.junit_jar}:{self.hamcrest_jar}:{self.evosuite_jar}",
                     "org.pitest.mutationtest.commandline.MutationCoverageReport",
                     "--reportDir", str(report_dir),
                     "--targetClasses", target_classes,
@@ -483,8 +491,8 @@ def main():
     print()
     
     # Cargar resultados de fases anteriores
-    baseline_file = Path("baseline_tests/T_base_results.json")
-    valid_file = Path("valid_tests/T_valid_results.json")
+    baseline_file = Path("generated_tests/baseline/T_base_results.json")
+    valid_file = Path("generated_tests/validated/T_valid_results.json")
     
     if not baseline_file.exists() or not valid_file.exists():
         print("❌ Faltan archivos de resultados de fases anteriores")
@@ -649,7 +657,10 @@ def main():
             print(f"   T_base:  {s['baseline_mean']:.2f}%")
             print(f"   T_valid: {s['valid_mean']:.2f}%")
             print(f"   Mejora:  {s['improvement_pct']:+.2f}%")
-            print(f"   p-value: {s['p_value']:.4f} {'✅ significativo' if s['significant'] else '❌ no significativo'}")
+            if isinstance(s['p_value'], str):
+                print(f"   p-value: {s['p_value']}")
+            else:
+                print(f"   p-value: {s['p_value']:.4f} {'✅ significativo' if s['significant'] else '❌ no significativo'}")
         
         print("\n📊 COBERTURA DE RAMAS:")
         if 'branch_coverage' in stats:
@@ -657,7 +668,10 @@ def main():
             print(f"   T_base:  {s['baseline_mean']:.2f}%")
             print(f"   T_valid: {s['valid_mean']:.2f}%")
             print(f"   Mejora:  {s['improvement_pct']:+.2f}%")
-            print(f"   p-value: {s['p_value']:.4f} {'✅ significativo' if s['significant'] else '❌ no significativo'}")
+            if isinstance(s['p_value'], str):
+                print(f"   p-value: {s['p_value']}")
+            else:
+                print(f"   p-value: {s['p_value']:.4f} {'✅ significativo' if s['significant'] else '❌ no significativo'}")
         
         print("\n🧬 MUTATION SCORE (MÉTRICA CLAVE):")
         if 'mutation_score' in stats:
@@ -665,7 +679,10 @@ def main():
             print(f"   T_base:  {s['baseline_mean']:.2f}%")
             print(f"   T_valid: {s['valid_mean']:.2f}%")
             print(f"   Mejora:  {s['improvement_pct']:+.2f}%")
-            print(f"   p-value: {s['p_value']:.4f} {'✅ significativo' if s['significant'] else '❌ no significativo'}")
+            if isinstance(s['p_value'], str):
+                print(f"   p-value: {s['p_value']}")
+            else:
+                print(f"   p-value: {s['p_value']:.4f} {'✅ significativo' if s['significant'] else '❌ no significativo'}")
     else:
         print("❌ No se pudieron calcular métricas")
     
@@ -776,12 +793,13 @@ def main():
             for metric in ['line_coverage', 'branch_coverage', 'mutation_score']:
                 if metric in stats:
                     s = stats[metric]
+                    p_val = s['p_value'] if isinstance(s['p_value'], str) else f"{s['p_value']:.4f}"
                     writer.writerow([
                         metric.replace('_', ' ').title(),
                         f"{s['baseline_mean']:.2f}",
                         f"{s['valid_mean']:.2f}",
                         f"{s['improvement_pct']:+.2f}",
-                        f"{s['p_value']:.4f}",
+                        p_val,
                         "Yes" if s['significant'] else "No"
                     ])
     
