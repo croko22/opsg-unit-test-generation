@@ -18,16 +18,19 @@ def find_sut_file(class_name: str, project_name: str) -> Optional[Path]:
     
     for root in roots:
         candidate = root / rel_path
+        print(f"    🔎 Checking {candidate}...") 
         if candidate.exists():
             return candidate
             
     # If not found, try recursive search in project dir (limited depth)
     project_dir = cfg.sf110_home / project_name
     if project_dir.exists():
+        print(f"    🔎 Recursive search in {project_dir} for {class_name.split('.')[-1]}.java...") 
         found = list(project_dir.rglob(f"{class_name.split('.')[-1]}.java"))
         if found:
             return found[0]
             
+    print(f"    ⚠️  SUT source not found for {class_name}") 
     return None
 
 class ContextExtractor:

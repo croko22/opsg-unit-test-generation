@@ -188,7 +188,13 @@ ERRORS:
 {error_log}
 
 INSTRUCTIONS:
-1. Fix missing imports (e.g. @RunWith, @Test).
+1. Fix missing imports. ALWAYS include these if missing:
+   import org.junit.Test;
+   import static org.junit.Assert.*;
+   import org.junit.runner.RunWith;
+   import org.evosuite.runtime.EvoRunner;
+   import org.evosuite.runtime.EvoRunnerParameters;
+   import static org.mockito.Mockito.*;
 2. Fix missing symbols (e.g. class names, methods).
 3. Do not remove the test logic, just fix the syntax/imports.
 4. Output the FULL corrected Java file.
