@@ -18,8 +18,7 @@ from pfc3.phases.baseline import BaselineGenerator
 from pfc3.phases.refinement import RefinementPhase
 from pfc3.phases.verification import VerificationPhase
 from pfc3.phases.evaluation import EvaluationPhase
-from pfc3.phases.evaluation import EvaluationPhase
-# from pfc3.phases.analysis import AnalysisPhase
+from pfc3.phases.analysis import AnalysisPhase
 
 
 def main():
