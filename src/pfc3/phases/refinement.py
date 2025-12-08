@@ -27,16 +27,45 @@ ORIGINAL:
 OUTPUT ONLY JAVA CODE."""
 
     def _clean_code(self, code: str) -> str:
-        # Simplified cleaning logic
+        """Extract Java code from LLM output."""
+        # 1. Try to find markdown code blocks
+        import re
+        match = re.search(r'```java\s*(.*?)\s*```', code, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+            
+        match = re.search(r'```\s*(.*?)\s*```', code, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+            
+        # 2. Fallback: Heuristic extraction
         lines = code.split('\n')
         cleaned = []
         in_code = False
-        for line in lines:
-            if line.strip().startswith("import") or line.strip().startswith("package") or line.strip().startswith("@"):
+        
+        # Find start (package or import)
+        start_idx = 0
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith("package ") or stripped.startswith("import ") or stripped.startswith("public class "):
+                start_idx = i
                 in_code = True
-            if in_code and not line.strip().startswith("```"):
-                cleaned.append(line)
-        return '\n'.join(cleaned)
+                break
+                
+        if not in_code:
+            return code # Return original if no structure found
+            
+        # Find end (last closing brace)
+        # This is tricky without parsing, but we can assume the last '}' is the end
+        # if we ignore trailing text.
+        # For now, just take everything from start
+        content = lines[start_idx:]
+        
+        # Remove trailing text that doesn't look like code
+        # Simple heuristic: if a line after the last '}' contains text, remove it.
+        # But finding the "last }" is hard if there are comments.
+        
+        return '\n'.join(content)
 
 class RefinementPhase:
     def run(self, adapter: str = "openrouter", model: str = None) -> Dict:

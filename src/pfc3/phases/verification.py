@@ -82,13 +82,21 @@ class VerificationPhase:
             
             # 1. Compile Refined
             cp = f"{sut_jar}:{cfg.junit_jar}:{cfg.evosuite_jar}:{refined_path.parent}"
-            res = runner.run_javac(cp, [refined_path], out_dir)
+            
+            # Find scaffolding
+            scaffolding = list(refined_path.parent.glob("*_scaffolding.java"))
+            files_to_compile = [refined_path] + scaffolding
+            
+            res = runner.run_javac(cp, files_to_compile, out_dir)
             if res.returncode != 0:
+                print(f"  ❌ Compilation Error:\n{res.stderr}")
                 return False, "Compilation failed"
                 
             # 2. Run Original (Baseline)
             # We need to compile original first
-            res = runner.run_javac(cp, [original_path], out_dir)
+            # Original scaffolding should be in the same dir as original file or we need to find it
+            orig_scaffolding = list(original_path.parent.glob("*_scaffolding.java"))
+            runner.run_javac(cp, [original_path] + orig_scaffolding, out_dir)
             if res.returncode != 0:
                 return False, "Original compilation failed"
                 
@@ -100,7 +108,7 @@ class VerificationPhase:
             
             # 3. Run Refined
             # Recompile refined to overwrite original .class
-            runner.run_javac(cp, [refined_path], out_dir)
+            runner.run_javac(cp, files_to_compile, out_dir)
             ref_res = runner.run_java(cp_run, "org.junit.runner.JUnitCore", [test_class])
             ref_passed = "OK (" in ref_res.stdout
             

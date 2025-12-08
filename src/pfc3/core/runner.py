@@ -77,4 +77,72 @@ class CommandRunner:
         except subprocess.TimeoutExpired:
             return {"success": False, "error": "timeout", "time": time.time() - start}
 
+    def run_with_jacoco(self,
+                        classpath: str,
+                        test_class: str,
+                        exec_file: Path,
+                        timeout: int = 60) -> subprocess.CompletedProcess:
+        """Run JUnit tests with JaCoCo agent."""
+        agent_opts = f"-javaagent:{cfg.jacoco_agent_jar}=destfile={exec_file},append=false"
+        
+        cmd = [
+            "java",
+            agent_opts,
+            "-cp", classpath,
+            "org.junit.runner.JUnitCore",
+            test_class
+        ]
+        
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+
+    def generate_jacoco_report(self,
+                             exec_file: Path,
+                             class_files_dir: Path,
+                             source_dir: Path,
+                             report_dir: Path) -> subprocess.CompletedProcess:
+        """Generate JaCoCo XML report."""
+        cmd = [
+            "java", "-jar", str(cfg.jacoco_cli_jar),
+            "report", str(exec_file),
+            "--classfiles", str(class_files_dir),
+            "--sourcefiles", str(source_dir),
+            "--xml", str(report_dir / "jacoco.xml")
+        ]
+        
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True
+        )
+
+    def run_pitest(self,
+                   classpath: str,
+                   target_classes: str,
+                   test_classes: str,
+                   source_dirs: str,
+                   report_dir: Path,
+                   timeout: int = 300) -> subprocess.CompletedProcess:
+        """Run PIT mutation testing."""
+        cmd = [
+            "java", "-cp", f"{cfg.pitest_jar}:{classpath}",
+            "org.pitest.mutationtest.commandline.MutationCoverageReport",
+            "--reportDir", str(report_dir),
+            "--targetClasses", target_classes,
+            "--targetTests", test_classes,
+            "--sourceDirs", source_dirs,
+            "--outputFormats", "XML"
+        ]
+        
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+
 runner = CommandRunner()

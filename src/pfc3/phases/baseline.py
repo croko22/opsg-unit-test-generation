@@ -12,9 +12,6 @@ class BaselineGenerator:
     def run(self, limit: int = None, time_budget: int = 60) -> Dict:
         """Execute Phase 1 pipeline."""
         
-        # Load classes from CSV
-        # TODO: Move CSV loading to loader or config?
-        # For now, keep simple logic here but use config paths
         csv_path = cfg.sf110_home / "classes.csv"
         if not csv_path.exists():
             csv_path = cfg.extended_dynamosa_home / "classes.csv"
