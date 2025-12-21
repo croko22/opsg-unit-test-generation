@@ -83,7 +83,8 @@ class CommandRunner:
                         exec_file: Path,
                         timeout: int = 60) -> subprocess.CompletedProcess:
         """Run JUnit tests with JaCoCo agent."""
-        agent_opts = f"-javaagent:{cfg.jacoco_agent_jar}=destfile={exec_file},append=false"
+        # includes=* ensures we capture everything, avoiding filtering issues
+        agent_opts = f"-javaagent:{cfg.jacoco_agent_jar}=destfile={exec_file},append=false,includes=*"
         
         cmd = [
             "java",
@@ -143,6 +144,52 @@ class CommandRunner:
             capture_output=True,
             text=True,
             timeout=timeout
+        )
+
+    def instrument_classes(self,
+                           classes_dir: Path,
+                           dest_dir: Path) -> subprocess.CompletedProcess:
+        """Instrument classes for offline JaCoCo."""
+        cmd = [
+            "java", "-jar", str(cfg.jacoco_cli_jar),
+            "instrument", str(classes_dir),
+            "--dest", str(dest_dir)
+        ]
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True
+        )
+
+    def run_with_jacoco_offline(self,
+                                classpath: str,
+                                test_class: str,
+                                exec_file: Path,
+                                timeout: int = 60) -> subprocess.CompletedProcess:
+        """Run JUnit tests with Offline JaCoCo (agent in CP, sys prop set)."""
+        # Note: Classpath must have instrumented classes FIRST.
+        
+        cmd = [
+            "java",
+            f"-Djacoco-agent.destfile={exec_file}",
+            "-cp", classpath,
+            "org.junit.runner.JUnitCore",
+            test_class
+        ]
+        
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+
+    def run_cmd(self, cmd: List[str]) -> subprocess.CompletedProcess:
+        """Run generic command."""
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True
         )
 
 runner = CommandRunner()

@@ -106,7 +106,7 @@ class AnalysisPhase:
         data_melted = df.melt(value_vars=['baseline_cov', 'valid_cov'], var_name='Type', value_name='Coverage')
         data_melted['Type'] = data_melted['Type'].map({'baseline_cov': 'Baseline', 'valid_cov': 'Refined'})
         
-        sns.violinplot(data=data_melted, x='Type', y='Coverage', palette="viridis", inner="quartile", alpha=0.8)
+        sns.violinplot(data=data_melted, x='Type', y='Coverage', hue='Type', palette="viridis", inner="quartile", alpha=0.8, legend=False)
         sns.stripplot(data=data_melted, x='Type', y='Coverage', color='black', alpha=0.3, jitter=True)
         plt.title('Coverage Distribution', fontweight='bold')
         plt.xlabel('')
@@ -140,7 +140,7 @@ class AnalysisPhase:
         data_melted = df.melt(value_vars=['baseline_mut', 'valid_mut'], var_name='Type', value_name='Score')
         data_melted['Type'] = data_melted['Type'].map({'baseline_mut': 'Baseline', 'valid_mut': 'Refined'})
         
-        sns.boxplot(data=data_melted, x='Type', y='Score', palette="magma", width=0.5)
+        sns.boxplot(data=data_melted, x='Type', y='Score', hue='Type', palette="magma", width=0.5, legend=False)
         sns.stripplot(data=data_melted, x='Type', y='Score', color='black', alpha=0.3, jitter=True)
         
         plt.title('Mutation Score Comparison', fontweight='bold')
@@ -224,7 +224,16 @@ class AnalysisPhase:
                 
             # Wilcoxon Signed-Rank Test
             try:
-                stat, p_value = stats.wilcoxon(df[base_col], df[valid_col])
+                diff = df[valid_col] - df[base_col]
+                if np.all(diff == 0):
+                     # All differences are zero, tests cannot run
+                    p_value = 1.0
+                else:
+                    # Using method='approx' or 'exact' depending on sample size if needed, 
+                    # but default auto is usually fine unless N is very small with zeros.
+                    # With N=2, this is still shaky but let's just catch warnings or handle zeros.
+                    stat, p_value = stats.wilcoxon(df[base_col], df[valid_col])
+                    
             except ValueError:
                 p_value = 1.0 # e.g. all identical
                 
@@ -253,7 +262,11 @@ class AnalysisPhase:
         for cm in code_metrics:
             if cm not in df.columns: continue
             
-            corr, p = stats.spearmanr(df[cm], df['cov_improvement'])
+            if df[cm].nunique() <= 1 or df['cov_improvement'].nunique() <= 1:
+                # Avoid ConstantInputWarning if variance is 0
+                corr, p = np.nan, np.nan
+            else:
+                corr, p = stats.spearmanr(df[cm], df['cov_improvement'])
             correlations.append({
                 'code_metric': cm,
                 'spearman_corr': corr,

@@ -5,6 +5,9 @@ from typing import List, Dict
 from ..core.config import cfg
 from ..core.loader import loader
 from ..core.runner import runner
+from ..utils.logger import logger
+from tqdm import tqdm
+
 
 class BaselineGenerator:
     """Phase 1: Generate baseline tests using EvoSuite."""
@@ -26,18 +29,18 @@ class BaselineGenerator:
         results = []
         success_count = 0
         
-        print(f"Phase 1: Processing {len(classes)} classes with budget {time_budget}s")
+        logger.info(f"Phase 1: Processing {len(classes)} classes with budget {time_budget}s")
         
-        for i, cls in enumerate(classes, 1):
+        for i, cls in enumerate(tqdm(classes, desc="Generating Baselines", unit="class")):
             project_name = cls['project']
             class_name = cls['class']
+
             
-            print(f"[{i}/{len(classes)}] {class_name}")
-            
+            # 1. Find Project & JAR
             # 1. Find Project & JAR
             project = loader.get_project(project_name)
             if not project or not project.jar_files:
-                print(f"  ❌ Project/JAR not found: {project_name}")
+                logger.warning(f"Project/JAR not found: {project_name}")
                 results.append({"project": project_name, "class": class_name, "success": False, "error": "no_jar"})
                 continue
                 
@@ -55,7 +58,7 @@ class BaselineGenerator:
                 tests = list(output_dir.glob("**/*_ESTest.java"))
                 if tests:
                     success_count += 1
-                    print(f"  ✅ Generated {len(tests)} tests")
+                    logger.debug(f"Generated {len(tests)} tests for {class_name}")
                     
                     # Parse coverage from stdout (simplified)
                     coverage = self._parse_coverage(result['stdout'])
@@ -71,10 +74,10 @@ class BaselineGenerator:
                         "coverage": coverage
                     })
                 else:
-                    print("  ❌ EvoSuite ran but produced no tests")
+                    logger.warning(f"EvoSuite ran but produced no tests for {class_name}")
                     results.append({"project": project_name, "class": class_name, "success": False, "error": "no_tests_generated"})
             else:
-                print(f"  ❌ EvoSuite failed: {result.get('error')}")
+                logger.error(f"EvoSuite failed for {class_name}: {result.get('error')}")
                 results.append({"project": project_name, "class": class_name, "success": False, "error": result.get('error')})
                 
             # Incremental save

@@ -35,3 +35,7 @@ temp_tests/
 evosuite-report/
 #temporal
 evaluation_results/ 
+
+.tmp*
+
+.env

@@ -12,11 +12,11 @@ class LLMRefiner:
     def __init__(self, adapter_name: str, model: str = None, **kwargs):
         self.adapter = get_adapter(adapter_name, model, **kwargs)
         
-    def refine_test(self, test_code: str, sut_path: Path = None) -> Dict:
+    def refine_test(self, test_code: str, sut_path: Path = None, class_name: str = None) -> Dict:
         context = ""
         if sut_path:
             extractor = ContextExtractor()
-            context = extractor.extract_context(sut_path)
+            context = extractor.extract_context(sut_path, class_name)
             
         prompt = self._build_prompt(test_code, context)
         result = self.adapter.generate(prompt)
@@ -74,7 +74,7 @@ class RefinementPhase:
                 # Actually, we can use the class name to find it.
                 sut_path = find_sut_file(item['class'], project)
                 
-                res = refiner.refine_test(code, sut_path) # Pass sut_path here
+                res = refiner.refine_test(code, sut_path, cls) # Pass sut_path and class_name here
                 
                 if res['success']:
                     out_dir = cfg.base_dir / "generated_tests/refined" / project / cls.replace(".", "_")

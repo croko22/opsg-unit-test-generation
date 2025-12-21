@@ -75,10 +75,15 @@ class EvaluationPhase:
         with tempfile.TemporaryDirectory() as tmpdir:
             out_dir = Path(tmpdir)
             
-            # Compile Test
+            # Find scaffolding (Required for compilation)
+            scaffolding = list(test_path.parent.glob("*_scaffolding.java"))
+            files_to_compile = [test_path] + scaffolding
+            
+            # Compile Test + Scaffolding
             cp = f"{sut_jar}:{cfg.junit_jar}:{cfg.evosuite_jar}:{cfg.hamcrest_jar}:{test_path.parent}"
-            res = runner.run_javac(cp, [test_path], out_dir)
+            res = runner.run_javac(cp, files_to_compile, out_dir)
             if res.returncode != 0:
+                print(f"  ❌ Compilation Error: {res.stderr[:200]}...") # Log first 200 chars
                 metrics["compilation_rate"] = 0.0
                 return metrics
 
@@ -90,25 +95,44 @@ class EvaluationPhase:
             # JaCoCo report needs class files. JAR is fine.
             # But we also need source files for source highlighting, though strictly for metrics XML is enough without source.
             
-            # Run test with agent
-            # Classpath must include compiled test and SUT
-            run_cp = f"{out_dir}:{sut_jar}:{cfg.junit_jar}:{cfg.evosuite_jar}:{cfg.hamcrest_jar}"
+            # Offline Instrumentation Strategy
+            # 1. Extract SUT classes
+            classes_dir = out_dir / "classes"
+            classes_dir.mkdir()
+            runner.run_cmd(["unzip", "-q", str(sut_jar), "-d", str(classes_dir)])
             
-            runner.run_with_jacoco(run_cp, test_class, exec_file)
+            # 2. Instrument classes
+            instr_dir = out_dir / "instr"
+            instr_dir.mkdir()
+            res_instr = runner.instrument_classes(classes_dir, instr_dir)
+            if res_instr.returncode != 0:
+                print(f"❌ Instrumentation failed: {res_instr.stderr}")
+            
+            # 3. Prepare classpath for execution
+            # Order: Instrumented Classes -> Original Classes (resources) -> Test Classes -> Dependencies -> Agent JAR (required for offline)
+            run_cp = f"{instr_dir}:{classes_dir}:{out_dir}:{cfg.junit_jar}:{cfg.evosuite_jar}:{cfg.hamcrest_jar}:{cfg.jacoco_agent_jar}"
+            
+            # 4. Run Test
+            exec_file = out_dir / "jacoco.exec"
+            res_run = runner.run_with_jacoco_offline(run_cp, test_class, exec_file)
+            
+            if res_run.returncode != 0:
+                 print(f"❌ Test execution failed: {res_run.stderr}")
+                 # Debug stdout too
+                 print(f"Stdout: {res_run.stdout[:200]}...")
             
             if exec_file.exists():
                 report_dir = out_dir / "report"
                 report_dir.mkdir()
-                # For report generation, we need the class files of the SUT. 
-                # If SUT is a JAR, we might need to extract it or pass it? 
-                # CLI --classfiles accepts jar.
                 
-                runner.generate_jacoco_report(exec_file, sut_jar, project_path, report_dir)
+                # 5. Report (using original classes)
+                res_rep = runner.generate_jacoco_report(exec_file, classes_dir, project_path, report_dir)
+                if res_rep.returncode != 0:
+                    print(f"❌ Report gen failed: {res_rep.stderr}")
                 
                 xml_file = report_dir / "jacoco.xml"
                 if xml_file.exists():
-                    cov = self._parse_jacoco(xml_file)
-                    metrics.update(cov)
+                    cov = self._parse_jacoco(xml_file, class_name)
 
             # 3. Mutation (PIT)
             # PIT needs source dirs to show code, but for metrics maybe not strictly required if we just want numbers?
@@ -159,33 +183,54 @@ class EvaluationPhase:
             
         return None
 
-    def _parse_jacoco(self, xml_file: Path) -> Dict[str, float]:
+    def _parse_jacoco(self, xml_file: Path, target_class: str) -> Dict[str, float]:
         try:
             tree = ET.parse(xml_file)
             root = tree.getroot()
             
-            # Counters are usually at the top level for the whole bundle or per package/class
-            # We want total coverage for the SUT (which should be the only thing in the report if we filtered, 
-            # but here we passed the whole SUT JAR).
-            # Ideally we filter for the specific class, but aggregate is okay if SUT is small.
-            # Better: find the specific class element.
+            # Convert target.class.Name to target/class/Name
+            target_path = target_class.replace('.', '/')
             
-            # Flatten counters
             counters = {"LINE": {"covered": 0, "missed": 0}, "BRANCH": {"covered": 0, "missed": 0}}
+            found = False
             
-            for counter in root.findall(".//counter"):
-                type_ = counter.get("type")
-                if type_ in counters:
-                    counters[type_]["covered"] += int(counter.get("covered", 0))
-                    counters[type_]["missed"] += int(counter.get("missed", 0))
+            # Find specific class element
+            # Structure: package > class > counter
+            for cls_node in root.findall(".//class"):
+                name = cls_node.get("name")
+                
+                # Check for exact match or inner class match (e.g. Class$1)
+                if name == target_path or name.startswith(target_path + "$"):
+                    found = True
+                    for counter in cls_node.findall("counter"):
+                        type_ = counter.get("type")
+                        if type_ not in counters:
+                            counters[type_] = {"covered": 0, "missed": 0}
+                        
+                        counters[type_]["covered"] += int(counter.get("covered", 0))
+                        counters[type_]["missed"] += int(counter.get("missed", 0))
+            
+            if not found:
+                 # Debug: list available to see why we missed
+                 available = [c.get("name") for c in root.findall(".//class")]
+                 print(f"⚠️  JaCoCo mismatch: Expected '{target_path}', Found: {available[:5]}...")
             
             def calc(c):
                 total = c["covered"] + c["missed"]
                 return (c["covered"] / total * 100) if total > 0 else 0.0
-                
+            
+            # Use INSTRUCTION if LINE is missing (common in release builds)
+            line_cov = calc(counters.get("LINE", {"covered": 0, "missed": 0}))
+            instr_cov = calc(counters.get("INSTRUCTION", {"covered": 0, "missed": 0}))
+            
+            # Prefer LINE, but take INSTRUCTION if LINE is 0 and INSTRUCTION > 0
+            final_cov = line_cov if line_cov > 0 else instr_cov
+            
             return {
-                "line_coverage": calc(counters["LINE"]),
-                "branch_coverage": calc(counters["BRANCH"])
+                "line_coverage": final_cov,
+                "branch_coverage": calc(counters.get("BRANCH", {"covered": 0, "missed": 0})),
+                "instruction_coverage": instr_cov,
+                "method_coverage": calc(counters.get("METHOD", {"covered": 0, "missed": 0}))
             }
         except Exception as e:
             print(f"Error parsing JaCoCo: {e}")
