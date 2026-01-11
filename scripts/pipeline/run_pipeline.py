@@ -8,18 +8,18 @@ import sys
 import os
 from pathlib import Path
 
-# Add src to path so we can import pfc3
+# Add src to path so we can import gspo_utg
 # This assumes run_pipeline.py is in scripts/pipeline/
 # and src is in ../../src
 base_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(base_dir / "src"))
 
-from pfc3.phases.baseline import BaselineGenerator
-from pfc3.phases.refinement import RefinementPhase
-from pfc3.phases.verification import VerificationPhase
-from pfc3.phases.evaluation import EvaluationPhase
-from pfc3.phases.analysis import AnalysisPhase
-from pfc3.utils.logger import logger
+from gspo_utg.phases.baseline import BaselineGenerator
+from gspo_utg.phases.refinement import RefinementPhase
+from gspo_utg.phases.verification import VerificationPhase
+from gspo_utg.phases.evaluation import EvaluationPhase
+from gspo_utg.phases.analysis import AnalysisPhase
+from gspo_utg.utils.logger import logger
 
 
 
@@ -66,7 +66,7 @@ def main():
     # Phase 5: Analysis
     if should_run(5):
         logger.info("\n=== PHASE 5: ANALYSIS ===")
-        from pfc3.phases.analysis import AnalysisPhase
+        from gspo_utg.phases.analysis import AnalysisPhase
         analysis = AnalysisPhase()
         analysis.run()
 

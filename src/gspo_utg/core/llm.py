@@ -1,5 +1,16 @@
 from typing import Dict
 import os
+from pathlib import Path
+
+# Load .env file automatically
+try:
+    from dotenv import load_dotenv
+    # Find .env in project root
+    env_path = Path(__file__).parent.parent.parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass  # python-dotenv not installed
 
 class BaseLLMAdapter:
     def __init__(self, model: str, **kwargs):
